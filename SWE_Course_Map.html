@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWE Course Map — Abdulrahman Alamry</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0a0f; color:#e2e8f0; font-family:'JetBrains Mono',monospace; }
+  ::selection { background:#f59e0b33; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script type="text/babel">
+const {useState,useCallback,useMemo} = React;
+
+const COURSES = {
+  MAT101:{name:"Calculus I",ch:3,cat:"gen",desc:"Limits, derivatives, integrals — the foundation of all engineering math.",pre:["IMP099"],tier:0},
+  PHY101:{name:"Physics I",ch:3,cat:"gen",desc:"Mechanics, motion, and forces — core physics for engineers.",pre:["MAT101"],coreq:"MAT101",tier:1},
+  ENL101:{name:"English for Academic Studies",ch:3,cat:"gen",desc:"Academic English reading and writing skills.",pre:[],tier:0},
+  ENL102:{name:"English Composition",ch:3,cat:"gen",desc:"Structured essay writing and composition.",pre:["ENL101"],tier:1},
+  ENL201:{name:"Writing and Research",ch:3,cat:"gen",desc:"Research papers and academic writing.",pre:["ENL102"],tier:2},
+  GEN150:{name:"Professionalism & Ethics",ch:3,cat:"gen",desc:"Professional conduct and ethical decision-making.",pre:[],tier:0},
+  INF120:{name:"Computers & Info Systems",ch:3,cat:"gen",desc:"Overview of computing systems and digital literacy.",pre:[],tier:0},
+  HST101:{name:"Islamic Culture & Values",ch:3,cat:"gen",desc:"Islamic heritage, values, and cultural foundations.",pre:[],tier:0},
+  PHY105:{name:"Physics Lab I",ch:1,cat:"college",desc:"Hands-on experiments in mechanics and motion.",pre:[],coreq:"PHY101",tier:1},
+  MAT102:{name:"Calculus II",ch:3,cat:"college",desc:"Integration techniques, sequences, and series.",pre:["MAT101"],tier:1},
+  MAT120:{name:"Discrete Mathematics",ch:3,cat:"college",desc:"Logic, sets, graphs, combinatorics — the math of CS.",pre:["IMP099"],tier:0,critical:true},
+  MAT221:{name:"Number Theory",ch:3,cat:"college",desc:"Primes, modular arithmetic, and cryptographic foundations.",pre:["MAT102"],tier:2},
+  MAT202:{name:"Linear Algebra",ch:3,cat:"college",desc:"Vectors, matrices, and linear transformations.",pre:["MAT101"],tier:1},
+  MAT240:{name:"Differential Equations",ch:3,cat:"college",desc:"Solving ODEs — modeling real-world dynamic systems.",pre:["MAT102"],tier:2},
+  ENG304:{name:"Probability & Statistics",ch:3,cat:"college",desc:"Probability distributions, hypothesis testing, regression.",pre:["MAT102"],tier:2},
+  ENG308:{name:"Numerical Methods",ch:3,cat:"college",desc:"Computational algorithms for solving math problems.",pre:["MAT202","MAT240"],tier:3},
+  SCI:{name:"Bio I or Chem I + Lab",ch:4,cat:"college",desc:"Choose Biology I or Chemistry I with its corresponding lab.",pre:[],tier:0},
+  CCS120:{name:"Comp. Thinking & Programming",ch:3,cat:"college-cs",desc:"Problem-solving with code — your first real programming course.",pre:["MAT120"],tier:1,critical:true},
+  CCS121:{name:"Comp. Thinking Lab",ch:1,cat:"college-cs",desc:"Hands-on programming exercises and projects.",pre:[],coreq:"CCS120",tier:1},
+  CCS200:{name:"Digital Logic & Design",ch:3,cat:"college-cs",desc:"Binary, logic gates, and circuit design fundamentals.",pre:["PHY101"],tier:2},
+  CCS220:{name:"OOP Design & Programming",ch:3,cat:"college-cs",desc:"Object-oriented programming — classes, inheritance, polymorphism.",pre:["CCS120"],tier:2,critical:true},
+  CCS221:{name:"OOP Lab",ch:1,cat:"college-cs",desc:"Practical OOP projects and coding assignments.",pre:[],coreq:"CCS220",tier:2},
+  CCS230:{name:"Database Systems",ch:3,cat:"college-cs",desc:"SQL, relational databases, ER modeling, and normalization.",pre:["CCS220","MAT120"],tier:3,critical:true},
+  CCS231:{name:"Database Systems Lab",ch:1,cat:"college-cs",desc:"Hands-on SQL queries and database design projects.",pre:[],coreq:"CCS230",tier:3},
+  CCS241:{name:"Computer Networks",ch:3,cat:"college-cs",desc:"TCP/IP, protocols, and network architecture.",pre:["CCS200"],tier:3},
+  CCS270:{name:"Data Structures & Algorithms",ch:3,cat:"college-cs",desc:"Arrays, trees, graphs, sorting — the backbone of CS.",pre:["CCS220"],tier:3},
+  CCS271:{name:"DS & Algorithms Lab",ch:1,cat:"college-cs",desc:"Implementing data structures and algorithm challenges.",pre:[],coreq:"CCS270",tier:3},
+  CCS320:{name:"Operating Systems",ch:3,cat:"college-cs",desc:"Processes, memory management, file systems, scheduling.",pre:["CCS270"],tier:4},
+  CCS330:{name:"Web Engineering",ch:3,cat:"college-cs",desc:"Full-stack web development — frontend, backend, deployment.",pre:["CCS230"],tier:4},
+  CCS331:{name:"Web Engineering Lab",ch:1,cat:"college-cs",desc:"Building and deploying real web applications.",pre:[],coreq:"CCS330",tier:4},
+  SWE301:{name:"Software Process & Methods",ch:3,cat:"swe",desc:"SDLC models, Agile, Scrum — how software gets built.",pre:["CCS230"],tier:4,gateway:true},
+  SWE305:{name:"Requirements Engineering",ch:3,cat:"swe",desc:"Eliciting, analyzing, and documenting software requirements.",pre:["CCS230"],tier:4},
+  SWE306:{name:"Requirements Eng. Lab",ch:1,cat:"swe",desc:"Practical requirements gathering and specification writing.",pre:[],coreq:"SWE305",tier:4},
+  SWE310:{name:"Human-Computer Interaction",ch:3,cat:"swe",desc:"UI/UX design principles, usability testing, and prototyping.",pre:["SWE301"],tier:5},
+  SWE311:{name:"HCI Lab",ch:1,cat:"swe",desc:"Designing and testing user interfaces.",pre:[],coreq:"SWE310",tier:5},
+  SWE340:{name:"Software Design & Architecture",ch:3,cat:"swe",desc:"Design patterns, architectural styles, and system design.",pre:["SWE305"],tier:5},
+  SWE341:{name:"Design & Architecture Lab",ch:1,cat:"swe",desc:"Applying design patterns in real projects.",pre:[],coreq:"SWE340",tier:5},
+  SWE345:{name:"Software Modelling & Analysis",ch:3,cat:"swe",desc:"UML diagrams, formal methods, and system modeling.",pre:["SWE301"],tier:5},
+  SWE420:{name:"Software Construction & Evolution",ch:3,cat:"swe",desc:"Building, refactoring, and evolving software systems.",pre:["SWE340"],tier:6},
+  SWE421:{name:"Construction & Evolution Lab",ch:1,cat:"swe",desc:"Hands-on construction and code evolution exercises.",pre:[],coreq:"SWE420",tier:6},
+  SWE430:{name:"Software Testing & QA",ch:3,cat:"swe",desc:"Unit tests, integration tests, QA processes, and automation.",pre:["SWE340"],tier:6},
+  SWE431:{name:"Testing & QA Lab",ch:1,cat:"swe",desc:"Writing tests and building CI/CD pipelines.",pre:[],coreq:"SWE430",tier:6},
+  SWE440:{name:"Software Security & Analysis",ch:3,cat:"swe",desc:"Secure coding, vulnerability analysis, and threat modeling.",pre:["SWE430"],tier:7},
+  SWE490:{name:"Capstone Design 1",ch:3,cat:"swe",desc:"First half of your graduation project — proposal and design.",pre:["96CH"],tier:7},
+  SWE491:{name:"Capstone Design 2",ch:3,cat:"swe",desc:"Second half — implementation, testing, and presentation.",pre:["SWE490"],tier:8},
+  SWE480:{name:"Internship",ch:3,cat:"elective",desc:"Real-world work experience at a company.",pre:["APPROVAL"],tier:7},
+  SWE441:{name:"Software Reliability & Quality",ch:3,cat:"elective",desc:"Measuring and improving software reliability metrics.",pre:["SWE340"],tier:6},
+  SWE442:{name:"Software Engineering Ethics",ch:3,cat:"elective",desc:"Ethical dilemmas and responsibilities in software development.",pre:["SWE305"],tier:5},
+  SWE443:{name:"Software Project Management",ch:3,cat:"elective",desc:"Planning, scheduling, and managing software projects.",pre:["SWE340","SWE345"],tier:6},
+  SWE444:{name:"Modern SW Methodologies",ch:3,cat:"elective",desc:"Latest trends: DevOps, microservices, serverless, etc.",pre:["SWE345"],tier:6},
+  SWE445:{name:"SW Development & Maintenance",ch:3,cat:"elective",desc:"Long-term software maintenance and legacy system evolution.",pre:["SWE340"],tier:6},
+  SWE447:{name:"Cloud Computing",ch:3,cat:"elective",desc:"AWS/Azure/GCP, containers, serverless architectures.",pre:["CCS330"],tier:5},
+  SWE495:{name:"Special Topics in SWE",ch:3,cat:"elective",desc:"Rotating advanced topics chosen by the department.",pre:["APPROVAL"],tier:7},
+};
+
+const CAT_COLORS = {
+  gen:{border:"#3b82f6",text:"#93c5fd"},
+  college:{border:"#22c55e",text:"#86efac"},
+  "college-cs":{border:"#a855f7",text:"#d8b4fe"},
+  swe:{border:"#ef4444",text:"#fca5a5"},
+  elective:{border:"#f59e0b",text:"#fcd34d"},
+};
+const CRITICAL_PATH=["MAT120","CCS120","CCS220","CCS230","SWE301"];
+const TIER_LABELS=["Foundation","Year 1 Core","Year 2 Start","Year 2 Core","Year 3 Start","Year 3 Core","Year 3 Advanced","Year 4 Start","Year 4 Final"];
+
+function App(){
+  const[completed,setCompleted]=useState(new Set());
+  const[current,setCurrent]=useState(new Set());
+  const[hovered,setHovered]=useState(null);
+  const[filter,setFilter]=useState("all");
+  const[showElectives,setShowElectives]=useState(false);
+
+  const toggle=(code)=>{
+    const isDone=completed.has(code);
+    const isCur=current.has(code);
+    if(isDone){setCompleted(p=>{const n=new Set(p);n.delete(code);return n});setCurrent(p=>{const n=new Set(p);n.delete(code);return n})}
+    else if(isCur){setCurrent(p=>{const n=new Set(p);n.delete(code);return n});setCompleted(p=>new Set(p).add(code))}
+    else{const c=COURSES[code];const ok=c.pre.every(p=>completed.has(p)||p==="IMP099"||p==="96CH"||p==="APPROVAL");if(ok)setCurrent(p=>new Set(p).add(code))}
+  };
+
+  const available=useMemo(()=>{
+    const s=new Set();
+    Object.entries(COURSES).forEach(([code,c])=>{
+      if(completed.has(code)||current.has(code))return;
+      if(c.pre.every(p=>completed.has(p)||p==="IMP099"||p==="96CH"||p==="APPROVAL"))s.add(code);
+    });return s;
+  },[completed,current]);
+
+  const completedCH=useMemo(()=>{let t=0;completed.forEach(c=>{if(COURSES[c])t+=COURSES[c].ch});return t},[completed]);
+  const currentCH=useMemo(()=>{let t=0;current.forEach(c=>{if(COURSES[c])t+=COURSES[c].ch});return t},[current]);
+
+  const tiers=useMemo(()=>{
+    const m={};
+    Object.entries(COURSES).forEach(([code,c])=>{
+      if(filter!=="all"&&c.cat!==filter&&!(filter==="college-all"&&(c.cat==="college"||c.cat==="college-cs")))return;
+      if(!showElectives&&c.cat==="elective")return;
+      if(!m[c.tier])m[c.tier]=[];m[c.tier].push(code);
+    });return m;
+  },[filter,showElectives]);
+
+  const s={
+    header:{background:"linear-gradient(180deg,#0f1419,#0a0a0f)",borderBottom:"1px solid #1e293b",padding:"28px 24px 20px"},
+    wrap:{maxWidth:1200,margin:"0 auto"},
+    tag:{display:"inline-flex",alignItems:"center",gap:8,marginBottom:4},
+    dot:{width:10,height:10,borderRadius:"50%",background:"#ef4444",boxShadow:"0 0 12px #ef444466"},
+    sub:{fontSize:11,color:"#64748b",letterSpacing:3,textTransform:"uppercase"},
+    h1:{fontSize:28,fontWeight:800,margin:"8px 0 4px",background:"linear-gradient(135deg,#f8fafc,#94a3b8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"},
+    by:{color:"#64748b",fontSize:12,margin:0,lineHeight:1.6},
+    warn:{background:"linear-gradient(135deg,#451a03,#7c2d12)",border:"1px solid #f97316",borderRadius:10,padding:"16px 20px",display:"flex",gap:14,alignItems:"flex-start"},
+    section:{maxWidth:1200,margin:"16px auto 0",padding:"0 24px",position:"relative",zIndex:1},
+    statBox:{flex:"1 1 180px",background:"#111318",border:"1px solid #1e293b",borderRadius:10,padding:"14px 18px"},
+    statLabel:{fontSize:10,color:"#64748b",letterSpacing:2,textTransform:"uppercase",marginBottom:6},
+    btn:(active,c="#64748b")=>({padding:"5px 12px",borderRadius:6,fontSize:11,fontWeight:600,border:active?`1px solid ${c}`:"1px solid #1e293b",background:active?"#1e293b":"transparent",color:active?"#e2e8f0":"#64748b",cursor:"pointer",fontFamily:"inherit"}),
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:"#0a0a0f",color:"#e2e8f0",fontFamily:"'JetBrains Mono',monospace"}}>
+      {/* Header */}
+      <div style={s.header}><div style={s.wrap}>
+        <div style={s.tag}><div style={s.dot}/><span style={s.sub}>Abdullah Al Salem University — College of Computer & Systems Engineering</span></div>
+        <h1 style={s.h1}>Software Engineering — Course Prerequisite Map</h1>
+        <p style={s.by}>By <span style={{color:"#f59e0b",fontWeight:700}}>Abdulrahman Alamry</span> — SWE Student at AASU <span style={{margin:"0 8px",color:"#334155"}}>|</span> 132 Credit Hours <span style={{margin:"0 8px",color:"#334155"}}>|</span> Click courses to track progress</p>
+      </div></div>
+
+      {/* Warning */}
+      {!completed.has("MAT120")&&<div style={s.section}><div style={s.warn}>
+        <div style={{fontSize:24}}>⚠️</div>
+        <div>
+          <div style={{fontWeight:800,color:"#fb923c",fontSize:14,marginBottom:4}}>CRITICAL: Take MAT120 (Discrete Math) ASAP!</div>
+          <div style={{color:"#fed7aa",fontSize:12,lineHeight:1.7}}>SWE is the <b style={{color:"#fbbf24"}}>only major</b> at AASU with a <b style={{color:"#fbbf24"}}>4-course prerequisite chain</b> before your first SWE course: <b style={{color:"#fff"}}>MAT120 → CCS120 → CCS220 → CCS230 → SWE301</b>. Every semester you delay MAT120 pushes your entire SWE track back.</div>
+        </div>
+      </div></div>}
+
+      {/* Stats */}
+      <div style={s.section}><div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+        <div style={s.statBox}>
+          <div style={s.statLabel}>Progress</div>
+          <div><span style={{fontSize:28,fontWeight:800,color:"#22c55e"}}>{completedCH}</span><span style={{color:"#475569",fontSize:13}}> / 132 CH</span></div>
+          <div style={{height:4,background:"#1e293b",borderRadius:2,marginTop:8,overflow:"hidden"}}><div style={{height:"100%",width:`${(completedCH/132)*100}%`,background:"linear-gradient(90deg,#22c55e,#4ade80)",borderRadius:2,transition:"width 0.4s"}}/></div>
+        </div>
+        <div style={s.statBox}>
+          <div style={s.statLabel}>Taking Now</div>
+          <div><span style={{fontSize:28,fontWeight:800,color:"#3b82f6"}}>{current.size}</span><span style={{color:"#475569",fontSize:13}}> courses ({currentCH} CH)</span></div>
+        </div>
+        <div style={s.statBox}>
+          <div style={s.statLabel}>Critical Path → SWE301</div>
+          <div style={{display:"flex",gap:4,marginTop:4}}>{CRITICAL_PATH.map(c=><div key={c} style={{flex:1,height:8,borderRadius:4,background:completed.has(c)?"#22c55e":current.has(c)?"#3b82f6":"#1e293b",transition:"background 0.3s"}} title={c}/>)}</div>
+          <div style={{fontSize:10,color:"#64748b",marginTop:6}}>{CRITICAL_PATH.map((c,i)=><span key={c}><span style={{color:completed.has(c)?"#22c55e":current.has(c)?"#3b82f6":"#475569",fontWeight:completed.has(c)||current.has(c)?700:400}}>{c}</span>{i<4&&<span style={{color:"#334155"}}> → </span>}</span>)}</div>
+        </div>
+      </div></div>
+
+      {/* Filters */}
+      <div style={{...s.section,display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+        <span style={{fontSize:10,color:"#475569",letterSpacing:2,textTransform:"uppercase"}}>Filter:</span>
+        {[{k:"all",l:"All"},{k:"gen",l:"Gen Ed"},{k:"college-all",l:"College"},{k:"college-cs",l:"Computing"},{k:"swe",l:"SWE Core"}].map(f=>
+          <button key={f.k} onClick={()=>setFilter(f.k)} style={s.btn(filter===f.k)}>{f.l}</button>
+        )}
+        <div style={{flex:1}}/>
+        <button onClick={()=>setShowElectives(!showElectives)} style={s.btn(showElectives,"#f59e0b")}>{showElectives?"▼":"▶"} Electives</button>
+        <button onClick={()=>{setCompleted(new Set());setCurrent(new Set())}} style={{...s.btn(false),color:"#ef4444"}}>Reset</button>
+      </div>
+
+      {/* Legend */}
+      <div style={{...s.section,display:"flex",gap:16,flexWrap:"wrap"}}>
+        {[{c:"#22c55e",l:"Completed"},{c:"#3b82f6",l:"Taking"},{c:"#fbbf24",l:"Available"},{c:"#475569",l:"Locked"},{c:"#ef4444",l:"Critical Path"}].map(x=>
+          <div key={x.l} style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:10,height:10,borderRadius:3,background:x.c}}/><span style={{fontSize:10,color:"#64748b"}}>{x.l}</span></div>
+        )}
+      </div>
+
+      {/* Course Grid */}
+      <div style={{maxWidth:1200,margin:"16px auto 40px",padding:"0 24px"}}>
+        {Object.keys(tiers).sort((a,b)=>a-b).map(tier=>(
+          <div key={tier} style={{marginBottom:16}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+              <div style={{fontSize:9,color:"#475569",letterSpacing:2,textTransform:"uppercase",background:"#111318",padding:"3px 10px",borderRadius:4,border:"1px solid #1e293b",whiteSpace:"nowrap"}}>Tier {tier} — {TIER_LABELS[tier]}</div>
+              <div style={{flex:1,height:1,background:"#1e293b"}}/>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {tiers[tier].map(code=>{
+                const course=COURSES[code],cat=CAT_COLORS[course.cat]||CAT_COLORS.gen;
+                const isDone=completed.has(code),isCur=current.has(code),isAvail=available.has(code);
+                const isCrit=course.critical||course.gateway;
+                const isH=hovered===code;
+                let bc="#1e293b",bg="#0d0f14",op=0.45;
+                if(isDone){bc="#22c55e";bg="#0a1a0a";op=1}
+                else if(isCur){bc="#3b82f6";bg="#0a0f1a";op=1}
+                else if(isAvail){bc="#fbbf24";bg="#1a1a0d";op=1}
+                if(isCrit&&!isDone)bc=isDone?"#22c55e":isCur?"#3b82f6":isAvail?"#f97316":"#ef4444";
+                return(
+                  <div key={code} onMouseEnter={()=>setHovered(code)} onMouseLeave={()=>setHovered(null)} onClick={()=>toggle(code)}
+                    style={{position:"relative",width:175,minHeight:72,background:bg,border:`1.5px solid ${bc}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",opacity:op,transition:"all 0.25s",transform:isH?"translateY(-2px)":"none",boxShadow:isH?`0 4px 20px ${bc}33`:isCrit&&!isDone?`0 0 12px ${bc}22`:"none"}}>
+                    <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:cat.border,borderRadius:"8px 8px 0 0",opacity:.6}}/>
+                    {(isDone||isCur)&&<div style={{position:"absolute",top:8,right:8,width:8,height:8,borderRadius:"50%",background:isDone?"#22c55e":"#3b82f6",boxShadow:`0 0 8px ${isDone?"#22c55e":"#3b82f6"}66`}}/>}
+                    <div style={{fontSize:11,fontWeight:800,color:cat.text,letterSpacing:.5,marginBottom:2}}>{code}<span style={{fontWeight:400,color:"#475569",marginLeft:6,fontSize:9}}>{course.ch}CH</span></div>
+                    <div style={{fontSize:10,color:isDone?"#86efac":isCur?"#93c5fd":"#94a3b8",fontWeight:600,lineHeight:1.3,marginBottom:4}}>{course.name}</div>
+                    {isH&&<div style={{fontSize:9,color:"#64748b",lineHeight:1.5,marginTop:2,borderTop:"1px solid #1e293b",paddingTop:4}}>
+                      {course.desc}
+                      {course.pre.length>0&&course.pre[0]!=="IMP099"&&course.pre[0]!=="96CH"&&course.pre[0]!=="APPROVAL"&&<div style={{marginTop:3,color:"#475569"}}>Pre: {course.pre.join(", ")}</div>}
+                      {course.coreq&&<div style={{color:"#475569"}}>Co-req: {course.coreq}</div>}
+                    </div>}
+                    {isCrit&&!isDone&&<div style={{position:"absolute",bottom:4,right:6,fontSize:8,color:"#ef4444",fontWeight:700,letterSpacing:1}}>CRITICAL</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* How to use */}
+      <div style={s.section}><div style={{background:"#111318",border:"1px solid #1e293b",borderRadius:10,padding:"14px 18px",fontSize:11,color:"#64748b",lineHeight:1.8,marginBottom:16}}>
+        <b style={{color:"#94a3b8"}}>How to use:</b> Click <span style={{color:"#fbbf24"}}>available (yellow)</span> → marks as taking. Click <span style={{color:"#3b82f6"}}>taking (blue)</span> → marks completed. Click <span style={{color:"#22c55e"}}>completed (green)</span> → undoes it. Hover for details.
+      </div></div>
+
+      {/* Footer */}
+      <div style={{borderTop:"1px solid #1e293b",padding:"16px 24px",textAlign:"center"}}>
+        <div style={{fontSize:10,color:"#334155",lineHeight:1.8}}>Made by <span style={{color:"#f59e0b",fontWeight:700}}>Abdulrahman Alamry</span> — Software Engineering Student at Abdullah Al Salem University<br/>Based on the official SWE 2023-2024 Major Sheet • Not an official university resource</div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.render(<App/>,document.getElementById("root"));
+</script>
+</body>
+</html>
